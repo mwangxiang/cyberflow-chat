@@ -37,7 +37,7 @@ const nextConfig = {
 
 nextConfig.env = {
   BASE_URL: "https://api.getcyberflow.ai",
-  HIDE_USER_API_KEY: "1",
+  HIDE_USER_API_KEY: "0",
   HIDE_BALANCE_QUERY: "0",
 };
 

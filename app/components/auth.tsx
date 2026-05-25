@@ -5,38 +5,28 @@ import { useNavigate } from "react-router-dom";
 import { Path } from "../constant";
 import { useAccessStore } from "../store";
 import BotIcon from "../icons/bot.svg";
-import { PasswordInput } from "./ui-lib";
-import { newApiLogin } from "../utils/newapi-auth";
 import clsx from "clsx";
 
 export function AuthPage() {
   const navigate = useNavigate();
   const accessStore = useAccessStore();
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      setError("请输入用户名和密码");
+  const handleSubmit = () => {
+    const key = apiKey.trim();
+    if (!key) {
+      setError("请输入 API 密钥");
       return;
     }
-    setLoading(true);
-    setError("");
-
-    const result = await newApiLogin(username, password);
-    if (!result.success) {
-      setError(result.error || "登录失败，请检查账号密码");
-      setLoading(false);
+    if (!key.startsWith("sk-")) {
+      setError("API 密钥格式不正确，应以 sk- 开头");
       return;
     }
-
     accessStore.update((access) => {
-      access.accessCode = result.accessCode!;
+      access.openaiApiKey = key;
     });
-    setLoading(false);
     navigate(Path.Chat);
   };
 
@@ -48,7 +38,7 @@ export function AuthPage() {
           flexDirection: "column",
           alignItems: "center",
           width: "100%",
-          maxWidth: "360px",
+          maxWidth: "400px",
           margin: "0 auto",
         }}
       >
@@ -57,8 +47,47 @@ export function AuthPage() {
         </div>
 
         <div className={styles["auth-title"]}>CyberFlow 算力中心</div>
-        <div className={styles["auth-tips"]}>
-          登录您的 CyberFlow 账户以使用 AI 算力
+        <div
+          className={styles["auth-tips"]}
+          style={{ textAlign: "center", lineHeight: 1.6 }}
+        >
+          请输入您的 API 密钥开始使用
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            marginTop: "2vh",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            background: "var(--second)",
+            fontSize: "13px",
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ marginBottom: "4px" }}>获取密钥：</div>
+          <div>
+            1. 前往{" "}
+            <a
+              href="https://api.getcyberflow.ai/register"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "var(--primary)" }}
+            >
+              注册账号
+            </a>
+            {" "}或{" "}
+            <a
+              href="https://api.getcyberflow.ai/login"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "var(--primary)" }}
+            >
+              登录
+            </a>
+          </div>
+          <div>2. 进入「令牌」页面，创建新令牌</div>
+          <div>3. 复制生成的密钥（sk-...），粘贴到下方</div>
         </div>
 
         <input
@@ -73,25 +102,15 @@ export function AuthPage() {
             width: "100%",
             boxSizing: "border-box",
           }}
-          type="text"
-          placeholder="用户名"
-          value={username}
-          onChange={(e) => setUsername(e.currentTarget.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          type="password"
+          placeholder="sk-xxxxxxxxxxxxxxxx"
+          value={apiKey}
+          onChange={(e) => {
+            setApiKey(e.currentTarget.value);
+            setError("");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
         />
-
-        <div style={{ width: "100%", marginTop: "1.5vh" }}>
-          <PasswordInput
-            style={{ width: "100%" }}
-            aria="显示密码"
-            aria-label="密码"
-            value={password}
-            type="text"
-            placeholder="密码"
-            onChange={(e) => setPassword(e.currentTarget.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          />
-        </div>
 
         {error && (
           <div
@@ -111,16 +130,9 @@ export function AuthPage() {
           style={{ marginTop: "2vh", width: "100%" }}
         >
           <IconButton
-            text={loading ? "登录中..." : "登录"}
+            text="开始使用"
             type="primary"
-            onClick={handleLogin}
-            disabled={loading}
-          />
-          <IconButton
-            text="注册账户"
-            onClick={() => {
-              window.open("https://api.getcyberflow.ai/register", "_blank");
-            }}
+            onClick={handleSubmit}
           />
         </div>
       </div>
