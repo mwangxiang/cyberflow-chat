@@ -2,188 +2,157 @@ import styles from "./auth.module.scss";
 import { IconButton } from "./button";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Path, SAAS_CHAT_URL } from "../constant";
+import { Path } from "../constant";
 import { useAccessStore } from "../store";
-import Locale from "../locales";
-import Delete from "../icons/close.svg";
-import Arrow from "../icons/arrow.svg";
-import Logo from "../icons/logo.svg";
-import { useMobileScreen } from "@/app/utils";
 import BotIcon from "../icons/bot.svg";
-import { getClientConfig } from "../config/client";
 import { PasswordInput } from "./ui-lib";
-import LeftIcon from "@/app/icons/left.svg";
-import { safeLocalStorage } from "@/app/utils";
 import {
-  trackSettingsPageGuideToCPaymentClick,
-  trackAuthorizationPageButtonToCPaymentClick,
-} from "../utils/auth-settings-events";
+  newApiLogin,
+  newApiGetSelf,
+  newApiGetOrCreateToken,
+} from "../utils/newapi-auth";
 import clsx from "clsx";
-
-const storage = safeLocalStorage();
 
 export function AuthPage() {
   const navigate = useNavigate();
   const accessStore = useAccessStore();
-  const goHome = () => navigate(Path.Home);
-  const goChat = () => navigate(Path.Chat);
-  const goSaas = () => {
-    trackAuthorizationPageButtonToCPaymentClick();
-    window.location.href = SAAS_CHAT_URL;
-  };
 
-  const resetAccessCode = () => {
-    accessStore.update((access) => {
-      access.openaiApiKey = "";
-      access.accessCode = "";
-    });
-  }; // Reset access code to empty string
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (getClientConfig()?.isApp) {
-      navigate(Path.Settings);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      const user = await newApiGetSelf();
+      if (user) {
+        const token = await newApiGetOrCreateToken();
+        if (token) {
+          accessStore.update((access) => {
+            access.openaiApiKey = token;
+          });
+          navigate(Path.Chat);
+          return;
+        }
+      }
+      setChecking(false);
+    })();
   }, []);
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setError("请输入用户名和密码");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    const result = await newApiLogin(username, password);
+    if (!result.success) {
+      setError(result.error || "登录失败，请检查账号密码");
+      setLoading(false);
+      return;
+    }
+
+    const token = await newApiGetOrCreateToken();
+    if (!token) {
+      setError("登录成功但无法获取 API 密钥，请联系管理员分配额度");
+      setLoading(false);
+      return;
+    }
+
+    accessStore.update((access) => {
+      access.openaiApiKey = token;
+    });
+    setLoading(false);
+    navigate(Path.Chat);
+  };
+
+  if (checking) {
+    return (
+      <div className={styles["auth-page"]}>
+        <div className={clsx("no-dark", styles["auth-logo"])}>
+          <BotIcon />
+        </div>
+        <div className={styles["auth-title"]}>正在检查登录状态...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles["auth-page"]}>
-      <TopBanner></TopBanner>
-      <div className={styles["auth-header"]}>
-        <IconButton
-          icon={<LeftIcon />}
-          text={Locale.Auth.Return}
-          onClick={() => navigate(Path.Home)}
-        ></IconButton>
-      </div>
       <div className={clsx("no-dark", styles["auth-logo"])}>
         <BotIcon />
       </div>
 
-      <div className={styles["auth-title"]}>{Locale.Auth.Title}</div>
-      <div className={styles["auth-tips"]}>{Locale.Auth.Tips}</div>
+      <div className={styles["auth-title"]}>CyberFlow 算力中心</div>
+      <div className={styles["auth-tips"]}>
+        登录您的 CyberFlow 账户以使用 AI 算力
+      </div>
 
-      <PasswordInput
-        style={{ marginTop: "3vh", marginBottom: "3vh" }}
-        aria={Locale.Settings.ShowPassword}
-        aria-label={Locale.Auth.Input}
-        value={accessStore.accessCode}
-        type="text"
-        placeholder={Locale.Auth.Input}
-        onChange={(e) => {
-          accessStore.update(
-            (access) => (access.accessCode = e.currentTarget.value),
-          );
+      <input
+        style={{
+          marginTop: "2vh",
+          padding: "10px 14px",
+          borderRadius: "8px",
+          border: "1px solid var(--border-in-light)",
+          background: "var(--white)",
+          color: "var(--black)",
+          fontSize: "14px",
+          width: "80%",
+          maxWidth: "320px",
         }}
+        type="text"
+        placeholder="用户名"
+        value={username}
+        onChange={(e) => setUsername(e.currentTarget.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
       />
 
-      {!accessStore.hideUserApiKey ? (
-        <>
-          <div className={styles["auth-tips"]}>{Locale.Auth.SubTips}</div>
-          <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
-            aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-            value={accessStore.openaiApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.openaiApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-          <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
-            aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            value={accessStore.googleApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.googleApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-        </>
-      ) : null}
+      <PasswordInput
+        style={{
+          marginTop: "1.5vh",
+          marginBottom: "1vh",
+          width: "80%",
+          maxWidth: "320px",
+        }}
+        aria="显示密码"
+        aria-label="密码"
+        value={password}
+        type="text"
+        placeholder="密码"
+        onChange={(e) => setPassword(e.currentTarget.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+      />
+
+      {error && (
+        <div
+          style={{
+            color: "#e53e3e",
+            fontSize: "13px",
+            marginTop: "1vh",
+            textAlign: "center",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       <div className={styles["auth-actions"]}>
         <IconButton
-          text={Locale.Auth.Confirm}
+          text={loading ? "登录中..." : "登录"}
           type="primary"
-          onClick={goChat}
+          onClick={handleLogin}
+          disabled={loading}
         />
         <IconButton
-          text={Locale.Auth.SaasTips}
+          text="注册账户"
           onClick={() => {
-            goSaas();
+            window.open("https://api.getcyberflow.ai/register", "_blank");
           }}
         />
       </div>
-    </div>
-  );
-}
-
-function TopBanner() {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const isMobile = useMobileScreen();
-  useEffect(() => {
-    // 检查 localStorage 中是否有标记
-    const bannerDismissed = storage.getItem("bannerDismissed");
-    // 如果标记不存在，存储默认值并显示横幅
-    if (!bannerDismissed) {
-      storage.setItem("bannerDismissed", "false");
-      setIsVisible(true); // 显示横幅
-    } else if (bannerDismissed === "true") {
-      // 如果标记为 "true"，则隐藏横幅
-      setIsVisible(false);
-    }
-  }, []);
-
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  const handleClose = () => {
-    setIsVisible(false);
-    storage.setItem("bannerDismissed", "true");
-  };
-
-  if (!isVisible) {
-    return null;
-  }
-  return (
-    <div
-      className={styles["top-banner"]}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className={clsx(styles["top-banner-inner"], "no-dark")}>
-        <Logo className={styles["top-banner-logo"]}></Logo>
-        <span>
-          {Locale.Auth.TopTips}
-          <a
-            href={SAAS_CHAT_URL}
-            rel="stylesheet"
-            onClick={() => {
-              trackSettingsPageGuideToCPaymentClick();
-            }}
-          >
-            {Locale.Settings.Access.SaasStart.ChatNow}
-            <Arrow style={{ marginLeft: "4px" }} />
-          </a>
-        </span>
-      </div>
-      {(isHovered || isMobile) && (
-        <Delete className={styles["top-banner-close"]} onClick={handleClose} />
-      )}
     </div>
   );
 }
