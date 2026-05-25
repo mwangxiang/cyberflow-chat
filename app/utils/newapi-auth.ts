@@ -9,7 +9,12 @@ export interface NewApiUser {
 export async function newApiLogin(
   username: string,
   password: string,
-): Promise<{ success: boolean; token?: string; user?: NewApiUser; error?: string }> {
+): Promise<{
+  success: boolean;
+  accessCode?: string;
+  user?: NewApiUser;
+  error?: string;
+}> {
   try {
     const res = await fetch("/api/cyberflow/login", {
       method: "POST",
@@ -17,8 +22,8 @@ export async function newApiLogin(
       body: JSON.stringify({ username, password }),
     });
     const data = await res.json();
-    if (data.success && data.token) {
-      return { success: true, token: data.token, user: data.user };
+    if (data.success && data.accessCode) {
+      return { success: true, accessCode: data.accessCode, user: data.user };
     }
     return { success: false, error: data.error || "登录失败" };
   } catch {

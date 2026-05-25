@@ -34,7 +34,7 @@ export function AuthPage() {
     }
 
     accessStore.update((access) => {
-      access.openaiApiKey = result.token!;
+      access.accessCode = result.accessCode!;
     });
     setLoading(false);
     navigate(Path.Chat);
