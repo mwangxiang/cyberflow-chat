@@ -35,6 +35,12 @@ const nextConfig = {
   },
 };
 
+nextConfig.env = {
+  BASE_URL: "https://api.getcyberflow.ai",
+  HIDE_USER_API_KEY: "1",
+  HIDE_BALANCE_QUERY: "0",
+};
+
 const CorsHeaders = [
   { key: "Access-Control-Allow-Credentials", value: "true" },
   { key: "Access-Control-Allow-Origin", value: "*" },
