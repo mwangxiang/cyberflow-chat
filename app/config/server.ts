@@ -2,6 +2,9 @@ import md5 from "spark-md5";
 import { DEFAULT_MODELS, DEFAULT_GA_ID } from "../constant";
 import { isGPT4Model } from "../utils/model";
 
+const isTruthyEnv = (value?: string) =>
+  value === "1" || value?.toLowerCase() === "true";
+
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -265,7 +268,7 @@ export const getServerSideConfig = () => {
     proxyUrl: process.env.PROXY_URL,
     isVercel: !!process.env.VERCEL,
 
-    hideUserApiKey: !!process.env.HIDE_USER_API_KEY,
+    hideUserApiKey: isTruthyEnv(process.env.HIDE_USER_API_KEY),
     disableGPT4,
     hideBalanceQuery: !process.env.ENABLE_BALANCE_QUERY,
     disableFastLink: !!process.env.DISABLE_FAST_LINK,
